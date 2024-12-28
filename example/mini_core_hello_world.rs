@@ -395,7 +395,7 @@ global_asm! {
 #[naked]
 extern "C" fn naked_test() {
     unsafe {
-        asm!("ret", options(noreturn));
+        naked_asm!("ret");
     }
 }
 
@@ -592,6 +592,7 @@ pub enum E2<X> {
     V4,
 }
 
+#[allow(unreachable_patterns)]
 fn check_niche_behavior() {
     if let E1::V2 { .. } = (E1::V1 { f: true }) {
         intrinsics::abort();

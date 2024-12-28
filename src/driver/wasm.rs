@@ -68,6 +68,7 @@ pub(crate) fn compile_wasm(
         TargetFrontendConfig {
             default_call_conv: CallConv::SystemV,
             pointer_width: target_lexicon::PointerWidth::U32,
+            page_size_align_log2: todo!(),
         },
         false,
         Symbol::intern("main_cgu"),
@@ -104,9 +105,10 @@ pub(crate) fn compile_wasm(
         tcx.dcx().fatal("Inline asm is not supported for WASM");
     }
 
+    let profiler = tcx.prof.clone();
     let mut cached_context = Context::new();
     for codegened_func in codegened_functions {
-        crate::base::compile_fn(&mut cx, &mut cached_context, &mut module, codegened_func);
+        crate::base::compile_fn(&mut cx, &profiler, &mut cached_context, &mut module, codegened_func);
     }
 
     let tmp_file =
@@ -153,7 +155,7 @@ struct WasmModule {
 impl WasmModule {
     fn new() -> Self {
         let mut waffle_module = waffle::Module {
-            orig_bytes: &[],
+            orig_bytes: Some(&[]),
             funcs: Default::default(),
             signatures: Default::default(),
             globals: Default::default(),
@@ -164,6 +166,7 @@ impl WasmModule {
             start_func: Default::default(),
             debug: Default::default(),
             debug_map: Default::default(),
+            custom_sections: Default::default()
         };
         let main_memory = waffle_module.memories.push(waffle::MemoryData {
             initial_pages: 0x2_000_000 / 65536, // FIXME modify as necessary
@@ -337,7 +340,6 @@ impl WasmModule {
                     | waffle::ValueDef::PickOutput(_, _, _)
                     | waffle::ValueDef::Alias(_)
                     | waffle::ValueDef::Placeholder(_)
-                    | waffle::ValueDef::Trace(_, _)
                     | waffle::ValueDef::None => {}
                 }
             }
@@ -408,6 +410,7 @@ impl Module for WasmModule {
         TargetFrontendConfig {
             default_call_conv: CallConv::SystemV,
             pointer_width: target_lexicon::PointerWidth::U32,
+            page_size_align_log2: todo!(),
         }
     }
 
